@@ -1,37 +1,69 @@
-# Kanji rnn
+# Kanji RNN
 
-Generate Kanji using RNN
+Using RNN to generate Kanji Characters (vector image).
 
-## Setup
+Example Training Sketches (20 randomly chosen out of 11000 [KanjiVG](http://kanjivg.tagaini.net/) dataset):
 
-To run this code you need the following:
+![Example Training Sketches](https://cdn.rawgit.com/hardmaru/sketch-rnn/master/example/training.svg)
 
-- a machine with multiple GPUs
-- Python3
-- Numpy, TensorFlow
+Generated Sketches (Temperature = 0.1):
 
-## Training the model
+![Generated Sketches](https://cdn.rawgit.com/hardmaru/sketch-rnn/master/example/output.svg)
 
-Use the `main_entry.py` script to train the model. To train the default model on CIFAR-10 simply use:
+# requirement
 
 ```
-python3 main_entry.py
+svgwrite
+xml.etree.ElementTree
+argparse
+cPickle
+svg.path
 ```
 
-You might want to at least change the `--data_dir` and `--save_dir` which point to paths on your system to download the data to (if not available), and where to save the checkpoints.
+# usages
 
-**I want to train on fewer GPUs**. To train on fewer GPUs we recommend using `CUDA_VISIBLE_DEVICES` to narrow the visibility of GPUs to only a few and then run the script. Don't forget to modulate the flag `--nr_gpu` accordingly.
+run `python train,py --data_set kanji`
 
-**I want to train on my own dataset**. Have a look at the `DataLoader` classes in the `data/` folder. You have to write an analogous data iterator object for your own dataset and the code should work well from there.
-
-## Pretrained model checkpoint
-
-## Citation
-
-### Data
-
-The data should be placed in the `data_store` folder, and the structure is like:
+You can use `utils.py` to play out some random training data after the svg files have been copied in:
 
 ```
---data_store
+%run -i utils.py
+loader = SketchLoader(data_filename = 'tuberlin')
+draw_stroke_color(random.choice(loader.raw_data))
 ```
+
+The default values are in `train.py`
+
+```
+--rnn_size RNN_SIZE             size of RNN hidden state (256)
+--num_layers NUM_LAYERS         number of layers in the RNN (2)
+--model MODEL                   rnn, gru, or lstm (lstm)
+--batch_size BATCH_SIZE         minibatch size (100)
+--seq_length SEQ_LENGTH         RNN sequence length (300)
+--num_epochs NUM_EPOCHS         number of epochs (500)
+--save_every SAVE_EVERY         save frequency (250)
+--grad_clip GRAD_CLIP           clip gradients at this value (5.0)
+--learning_rate LEARNING_RATE   learning rate (0.005)
+--decay_rate DECAY_RATE         decay rate after each epoch (adam is used) (0.99)
+--num_mixture NUM_MIXTURE       number of gaussian mixtures (24)
+--data_scale DATA_SCALE         factor to scale raw data down by (15.0)
+--keep_prob KEEP_PROB           dropout keep probability (0.8)
+--stroke_importance_factor F    gradient boosting of sketch-finish event (200.0)
+--dataset_name DATASET_NAME     name of directory containing training data (kanji)
+```
+
+## Sampling a Sketch
+
+I've included a pretrained model in `/save` so it should work out of the box.
+
+Running `python sample.py --filename output --num_picture 10 --dataset_name kanji`
+
+## More useful links, pointers, datasets
+
+- Alex Graves' [paper](http://arxiv.org/abs/1308.0850) on text sequence and handwriting generation.
+
+- [KanjiVG](http://kanjivg.tagaini.net/). Fantastic Database of Kanji Stroke Order.
+
+# License
+
+MIT
