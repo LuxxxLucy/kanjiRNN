@@ -40,8 +40,8 @@ def main():
                         help='Location for parameter checkpoints and samples')
     parser.add_argument('--model_name', type=str, default='lstm_model',
                         help='gru_model|lstm_model model file name (will create a separated folder)')
-    parser.add_argument('-d', '--data_set', type=str, default='ml_100K',
-                        help='Can be either netflix|ml_1M|ml_100K|yelp')
+    parser.add_argument('-d', '--data_set', type=str, default='kanji',
+                        help='Can be kanji')
     parser.add_argument('-c','--checkpoint_interval', type=int, default=50,
                         help='Every how many epochs to write checkpoint/samples?')
     parser.add_argument('-r','--report_interval', type=int, default=1000,
@@ -101,12 +101,13 @@ def main():
 def train(args):
     class_num = {'ml_100K': 1682,
                  'ml_1M': 3952,
+                 'kanji':5,
                  'netflix': 17770}[args.data_set]
 
     # initialize data loaders for train/test splits
     args.class_num = class_num
 
-    if args.data_set == 'kanjivg':
+    if args.data_set == 'kanji':
         print('start loading dataset', args.data_set)
         # data loader
         import data.kanjivg_data as data
@@ -117,19 +118,12 @@ def train(args):
         quit()
 
     args.model_file_name=args.model_name+"_file"
-    if args.model_name == "fc_model":
-        from rec_model.model import FC_Model_Session as model_session
-        print('import FC model okay')
-    elif args.model_name == "lstm_model":
-        from rec_model.model import LSTM_Model_Session as model_session
-        print('import LSTM model okay')
-    elif args.model_name == "robin_model":
-        from rec_model.Robin_model import LSTM_Model_Session as model_session
-        print('import Robin paper LSTM model okay')
+    if args.model_name == "graves_model":
+        from leaner_model.graves_model import LSTM_Model_Session as model_session
+        print('import graves model LSTM model okay')
     else:
         print('not valid name for model')
         quit()
-
 
     model_path_name = path.join(args.model_directory, args.model_file_name)
     print("The model's path is", model_path_name)
@@ -150,8 +144,10 @@ def train(args):
         model = model_session.create(class_num=class_num, item_dim=ITEM_DIM, args=args)
     print(model)
 
+
     args.max_len=dataLoader.max_len
     model.args=args
+    model.dataLoader=dataLoader
 
     if args.training_num is None:
         args.training_num = len(dataLoader.X_train)

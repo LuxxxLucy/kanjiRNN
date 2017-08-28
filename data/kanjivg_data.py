@@ -4,12 +4,14 @@ data loader for KanjiVG dataset
 """
 
 
-import numpy as np
+import os
 import pickle
-from os import path
-from pathlib import Path
+import numpy as np
+import xml.etree.ElementTree as ET
 import random
-from .item2vec import train_item2vec
+import svgwrite
+from IPython.display import SVG, display
+from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
 import settings
 
@@ -18,11 +20,10 @@ DATASET_PATH = path.join(settings.DATA_STORE_PATH, 'kanjivg', 'data')
 TEST_NUMBER=100
 
 class SketchLoader():
-	def __init__(self, args)
-		batch_size=50, seq_length=300, scale_factor = 1.0, data_filename = "kanji"):
+	def __init__(self, args, batch_size=50, seq_length=300, scale_factor = 1.0, data_filename = "kanji"):
 		self.data_dir = DATASET_PATH
 		self.batch_size = args.batch_size
-		self.seq_length = args.hist_length
+		self.seq_length = args.seq_length
 		self.scale_factor = scale_factor # divide data by this factor
 
 		data_file = os.path.join(self.data_dir, data_filename+".cpkl")
@@ -74,9 +75,9 @@ class SketchLoader():
 				for i in range(len(full_path)):
 					p = full_path[i]
 					if type(p) != Line and type(p) != CubicBezier:
-						print "encountered an element that is not just a line or bezier "
-						print "type: ",type(p)
-						print p
+						print ("encountered an element that is not just a line or bezier ")
+						print ("type: ",type(p))
+						print (p)
 					else:
 						x_start = p.start.real
 						y_start = p.start.imag
@@ -128,13 +129,13 @@ class SketchLoader():
 				sketch.append(build_lines(filelist[i]))
 
 		f = open(data_file,"wb")
-		cPickle.dump(sketch, f, protocol=2)
+		pickle.dump(sketch, f, protocol=2)
 		f.close()
 		return len_data
 
 	def load_preprocessed(self, data_file):
 		f = open(data_file,"rb")
-		self.raw_data = cPickle.load(f)
+		self.raw_data = pickle.load(f)
 		# scale the data here, rather than at the data construction (since scaling may change)
 		for data in self.raw_data:
 			data[:,0:2] /= self.scale_factor
