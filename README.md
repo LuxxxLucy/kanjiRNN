@@ -1,5 +1,7 @@
 # Kanji RNN
 
+still under development!!!!cannot run without dataset!
+
 Using RNN to generate Kanji Characters (vector image).
 
 Example Training Sketches (20 randomly chosen out of 11000 [KanjiVG](http://kanjivg.tagaini.net/) dataset):
