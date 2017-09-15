@@ -15,7 +15,7 @@ from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
 import settings
 
-DATASET_PATH = path.join(settings.DATA_STORE_PATH, 'kanjivg', 'data')
+DATASET_PATH = os.path.join(settings.DATA_STORE_PATH, 'kanjivg')
 
 TEST_NUMBER=100
 
@@ -30,7 +30,7 @@ class SketchLoader():
 		raw_data_dir = os.path.join(self.data_dir, data_filename)
 
 		if not (os.path.exists(data_file)) :
-				print "creating training data cpkl file from raw source"
+				print ("creating training data cpkl file from raw source")
 				self.length_data = self.preprocess(raw_data_dir, data_file)
 
 		self.load_preprocessed(data_file)
@@ -125,7 +125,7 @@ class SketchLoader():
 		sketch = []
 		for i in range(len(filelist)):
 			if (filelist[i][-3:] == 'svg'):
-				print 'processing '+filelist[i]
+				print ('processing '+filelist[i])
 				sketch.append(build_lines(filelist[i]))
 
 		f = open(data_file,"wb")

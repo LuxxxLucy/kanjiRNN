@@ -7,6 +7,9 @@ import svgwrite
 from IPython.display import SVG, display
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
+def draw_sketch_array(strokes_array, svg_only = False):
+  draw_stroke_color_array(strokes_array, factor=sample_args.scale_factor, maxcol = sample_args.num_col, svg_filename = sample_args.filename+'.svg', stroke_width = sample_args.stroke_width, block_size = sample_args.picture_size, svg_only = svg_only, color_mode = color_mode)
+
 def calculate_start_point(data, factor=1.0, block_size = 200):
 	# will try to center the sketch to the middle of the block
 	# determines maxx, minx, maxy, miny

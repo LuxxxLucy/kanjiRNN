@@ -42,7 +42,7 @@ def main():
                         help='gru_model|lstm_model model file name (will create a separated folder)')
     parser.add_argument('-d', '--data_set', type=str, default='kanji',
                         help='Can be kanji')
-    parser.add_argument('-c','--checkpoint_interval', type=int, default=50,
+    parser.add_argument('-c','--checkpoint_interval', type=int, default=1,
                         help='Every how many epochs to write checkpoint/samples?')
     parser.add_argument('-r','--report_interval', type=int, default=1000,
                         help='Every how many epochs to report current situation?')
@@ -55,8 +55,12 @@ def main():
     parser.add_argument('--random_sample', type=bool, default=False,
                         help='train with full data or with random samples')
 
+
+    parser.add_argument('--mode', type=str, default='sample',
+                        help='train or sample')
+
     # model
-    parser.add_argument('-q', '--hist_length', type=int, default=30,
+    parser.add_argument('-q', '--seq_length', type=int, default=30,
                         help='The minimum length of history sequence')
     parser.add_argument('--training_num', type=int, default=None,
                         help='number of training samples')
@@ -64,6 +68,9 @@ def main():
                         help='number of training epoch')
     parser.add_argument('--val_portion', type=float, default=0.005,
                         help='The portion of data to be validation data')
+
+    parser.add_argument('--data_scale', type=float, default=15,
+                        help='data scale factor')
 
     # hyper-parameter for optimization
     parser.add_argument('--learning_rate', type=float,
@@ -95,8 +102,10 @@ def main():
     # rng = np.random.RandomState(args.seed)
     print("random seed is",args.seed)
     # tf.set_random_seed(args.seed)
-    train(args)
-
+    if args.mode=='train':
+        train(args)
+    elif args.mode=='sample':
+        sample(args)
 
 def train(args):
     class_num = {'ml_100K': 1682,
@@ -173,8 +182,16 @@ def train(args):
     print("Final model %s" % model)
 
 
-def test(args):
-    model_path_name = path.join(args.model_directory, args.model_file_name)
+def sample(args):
+    model_path_name = path.join(args.model_directory, args.model_name)
+
+    print("start loading data set",args.data_set)
+
+    import data.kanjivg_data as data
+    data_loader = data.SketchLoader(args)
+
+
+    # draw_stroke_color
 
     # TODO:get data
 
