@@ -7,6 +7,10 @@ import svgwrite
 from IPython.display import SVG, display
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
+import settings
+
+OUTPUT_PATH= os.path.join(settings.DATA_STORE_PATH,'output')
+
 def draw_sketch_array(strokes_array, args, svg_only = False):
   draw_stroke_color_array(strokes_array, args, svg_only = svg_only)
 
@@ -37,8 +41,7 @@ def draw_stroke_color_array(data, args, svg_only=True):
 	factor=args.scale_factor
 	maxcol = args.num_col
 	svg_filename = args.filename+'.svg'
-
-	print(svg_filename)
+	svg_filename = os.path.join(OUTPUT_PATH,svg_filename)
 
 	stroke_width = args.stroke_width
 	block_size = args.picture_size

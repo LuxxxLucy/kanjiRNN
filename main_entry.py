@@ -212,8 +212,6 @@ def sample(args):
 
     print("data set loading okay")
     input_data, target_data = data_loader.next_batch()
-    pr(input_data[0])
-    pr(target_data[0])
     draw_sketch_array(input_data, args, svg_only = True)
 
     quit()
