@@ -13,6 +13,8 @@ import svgwrite
 from IPython.display import SVG, display
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
+from pprint import pprint as pr
+
 import settings
 
 DATASET_PATH = os.path.join(settings.DATA_STORE_PATH, 'kanjivg')
@@ -20,7 +22,7 @@ DATASET_PATH = os.path.join(settings.DATA_STORE_PATH, 'kanjivg')
 TEST_NUMBER=100
 
 class SketchLoader():
-	def __init__(self, args, batch_size=50, seq_length=300, scale_factor = 1.0, data_filename = "kanji"):
+	def __init__(self, args, batch_size=50, seq_length=300, scale_factor = 1.0, data_filename = "source"):
 		self.data_dir = DATASET_PATH
 		self.batch_size = args.batch_size
 		self.seq_length = args.seq_length
@@ -33,7 +35,9 @@ class SketchLoader():
 				print ("creating training data cpkl file from raw source")
 				self.length_data = self.preprocess(raw_data_dir, data_file)
 
+		print("loading processed cpkl")
 		self.load_preprocessed(data_file)
+		print("loading processed cpkl OVER")
 		self.num_samples = len(self.raw_data)
 		self.index = range(self.num_samples) # this list will be randomized later.
 		self.reset_index_pointer()
@@ -60,7 +64,7 @@ class SketchLoader():
 			tree = ET.parse(svgfile)
 			p = []
 			for elem in tree.iter():
-				if elem.attrib.has_key('d'):
+				if 'd' in elem.attrib:
 					p.append(elem.attrib['d'])
 			return p
 
@@ -114,12 +118,13 @@ class SketchLoader():
 		# build the list of xml files
 		filelist = []
 		# Set the directory you want to start from
-		rootDir = data_dir
-		for dirName, subdirList, fileList in os.walk(rootDir):
-			#print('Found directory: %s' % dirName)
+		print("searching data dir",data_dir)
+		for dirName, subdirList, fileList in os.walk(data_dir):
+			print('Found directory: %s' % dirName)
 			for fname in fileList:
-				#print('\t%s' % fname)
+				print('\t%s' % fname)
 				filelist.append(dirName+"/"+fname)
+		print("Over on searching data dir",data_dir)
 
 		# build stroke database of every xml file inside iam database
 		sketch = []
@@ -153,7 +158,7 @@ class SketchLoader():
 			rand_scale_factor_y = np.random.rand()*0.6+0.7
 			idx = 0
 			data = self.current_data()
-			for i in xrange(n):
+			for i in range(n):
 				result[i, 0:4] = data[idx] # eoc = 0.0
 				result[i, 4] = 1 # continue on stroke
 				if (result[i, 2] > 0 or result[i, 3] > 0):
@@ -176,7 +181,7 @@ class SketchLoader():
 
 		batch = []
 
-		for i in xrange(self.batch_size):
+		for i in range(self.batch_size):
 			seq = next_seq(skip_length)
 			batch.append(seq)
 

@@ -30,6 +30,8 @@ sys.path.append(dir_path)
 
 import settings
 
+from pprint import pprint as pr
+
 
 # -----------------------------------------------------------------------------
 def main():
@@ -190,8 +192,12 @@ def sample(args):
     import data.kanjivg_data as data
     data_loader = data.SketchLoader(args)
 
+    print("data set loading okay")
+    input_data, target_data = data_loader.next_batch()
+    pr(input_data[0])
+    pr(target_data[0])
 
-    # draw_stroke_color
+    quit()
 
     # TODO:get data
 
