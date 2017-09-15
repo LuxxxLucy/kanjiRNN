@@ -28,6 +28,8 @@ ITEM_DIM = 100
 dir_path = path.dirname(path.dirname(path.dirname(path.realpath(__file__))))
 sys.path.append(dir_path)
 
+from utils import *
+
 import settings
 
 from pprint import pprint as pr
@@ -61,6 +63,25 @@ def main():
     parser.add_argument('--mode', type=str, default='sample',
                         help='train or sample')
 
+    parser.add_argument('--filename', type=str, default='output',
+                       help='filename of .svg file to output, without .svg')
+    parser.add_argument('--sample_length', type=int, default=600,
+                       help='number of strokes to sample')
+    parser.add_argument('--picture_size', type=float, default=160,
+                       help='a centered svg will be generated of this size')
+    parser.add_argument('--scale_factor', type=float, default=1,
+                       help='factor to scale down by for svg output.  smaller means bigger output')
+    parser.add_argument('--num_picture', type=int, default=20,
+                       help='number of pictures to generate')
+    parser.add_argument('--num_col', type=int, default=5,
+                       help='if num_picture > 1, how many pictures per row?')
+    parser.add_argument('--color_mode', type=int, default=1,
+                       help='set to 0 if you are a black and white sort of person...')
+    parser.add_argument('--stroke_width', type=float, default=2.0,
+                       help='thickness of pen lines')
+    parser.add_argument('--temperature', type=float, default=0.1,
+                       help='sampling temperature')
+
     # model
     parser.add_argument('-q', '--seq_length', type=int, default=30,
                         help='The minimum length of history sequence')
@@ -70,9 +91,6 @@ def main():
                         help='number of training epoch')
     parser.add_argument('--val_portion', type=float, default=0.005,
                         help='The portion of data to be validation data')
-
-    parser.add_argument('--data_scale', type=float, default=15,
-                        help='data scale factor')
 
     # hyper-parameter for optimization
     parser.add_argument('--learning_rate', type=float,
@@ -196,6 +214,7 @@ def sample(args):
     input_data, target_data = data_loader.next_batch()
     pr(input_data[0])
     pr(target_data[0])
+    draw_sketch_array(input_data, args, svg_only = True)
 
     quit()
 

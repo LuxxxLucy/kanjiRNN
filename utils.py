@@ -1,5 +1,5 @@
 import os
-import cPickle
+import pickle
 import numpy as np
 import xml.etree.ElementTree as ET
 import random
@@ -7,8 +7,8 @@ import svgwrite
 from IPython.display import SVG, display
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
-def draw_sketch_array(strokes_array, svg_only = False):
-  draw_stroke_color_array(strokes_array, factor=sample_args.scale_factor, maxcol = sample_args.num_col, svg_filename = sample_args.filename+'.svg', stroke_width = sample_args.stroke_width, block_size = sample_args.picture_size, svg_only = svg_only, color_mode = color_mode)
+def draw_sketch_array(strokes_array, args, svg_only = False):
+  draw_stroke_color_array(strokes_array, args, svg_only = svg_only)
 
 def calculate_start_point(data, factor=1.0, block_size = 200):
 	# will try to center the sketch to the middle of the block
@@ -32,7 +32,17 @@ def calculate_start_point(data, factor=1.0, block_size = 200):
 
 	return abs_x, abs_y, (maxx-minx), (maxy-miny)
 
-def draw_stroke_color_array(data, factor=1, svg_filename = 'sample.svg', stroke_width = 1, block_size = 200, maxcol = 5, svg_only = False, color_mode = True):
+def draw_stroke_color_array(data, args, svg_only=True):
+
+	factor=args.scale_factor
+	maxcol = args.num_col
+	svg_filename = args.filename+'.svg'
+
+	print(svg_filename)
+
+	stroke_width = args.stroke_width
+	block_size = args.picture_size
+	color_mode = args.color_mode
 
 	num_char = len(data)
 
