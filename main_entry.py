@@ -39,6 +39,10 @@ from pprint import pprint as pr
 def main():
     parser = argparse.ArgumentParser()
 
+    # meta info
+    parser.add_argument('--mode', type=str, default='sample',
+                        help='train or sample')
+
     # data I/O
     parser.add_argument('--model_directory', type=str, default=settings.MODEL_STORE_PATH,
                         help='Location for parameter checkpoints and samples')
@@ -59,10 +63,43 @@ def main():
     parser.add_argument('--random_sample', type=bool, default=False,
                         help='train with full data or with random samples')
 
+    # data set construction
+    parser.add_argument('--training_num', type=int, default=None,
+                        help='number of training samples')
+    parser.add_argument('--training_epoch', type=int, default=300,
+                        help='number of training epoch')
+    parser.add_argument('--val_portion', type=float, default=0.005,
+                        help='The portion of data to be validation data')
 
-    parser.add_argument('--mode', type=str, default='sample',
-                        help='train or sample')
+    # model
+    parser.add_argument('--rnn_size', type=int, default=256,
+                        help='size of RNN hidden state')
+    parser.add_argument('--num_layers', type=int, default=2,
+                        help='number of layers in the RNN')
+    parser.add_argument('-q', '--seq_length', type=int, default=30,
+                        help='The minimum length of history sequence')
 
+    # hyper-parameter for optimization
+    parser.add_argument('--grad_clip', type=float, default=5.0,
+                        help='clip gradients at this value')
+    parser.add_argument('--learning_rate', type=float,
+                        default=0.1, help='Base learning rate')
+    parser.add_argument('--lr_decay', type=float, default=0.999995,
+                        help='Learning rate decay, applied every step of the optimization')
+    parser.add_argument('--batch_size', type=int, default=128,
+                        help='Batch size during training per GPU')
+    parser.add_argument('--dropout_rate', type=float, default=0.0,
+                        help='Dropout strength, where 0 = No dropout, higher = more dropout.')
+    parser.add_argument('--sample_dropout_rate', type=float, default=0.5,
+                        help='Dropout rate for selecting training samples, where 0 = No dropout, higher = more dropout.')
+    parser.add_argument('-g', '--nr_gpu', type=int, default=1,
+                        help='The number GPUs to distribute the training across')
+
+    # reproducibility:random seed
+    parser.add_argument('-s', '--seed', type=int, default=42,
+                        help='Random seed to use')
+
+    # sample options
     parser.add_argument('--filename', type=str, default='output',
                        help='filename of .svg file to output, without .svg')
     parser.add_argument('--sample_length', type=int, default=600,
@@ -81,34 +118,6 @@ def main():
                        help='thickness of pen lines')
     parser.add_argument('--temperature', type=float, default=0.1,
                        help='sampling temperature')
-
-    # model
-    parser.add_argument('-q', '--seq_length', type=int, default=30,
-                        help='The minimum length of history sequence')
-    parser.add_argument('--training_num', type=int, default=None,
-                        help='number of training samples')
-    parser.add_argument('--training_epoch', type=int, default=300,
-                        help='number of training epoch')
-    parser.add_argument('--val_portion', type=float, default=0.005,
-                        help='The portion of data to be validation data')
-
-    # hyper-parameter for optimization
-    parser.add_argument('--learning_rate', type=float,
-                        default=0.1, help='Base learning rate')
-    parser.add_argument('--lr_decay', type=float, default=0.999995,
-                        help='Learning rate decay, applied every step of the optimization')
-    parser.add_argument('--batch_size', type=int, default=128,
-                        help='Batch size during training per GPU')
-    parser.add_argument('--dropout_rate', type=float, default=0.0,
-                        help='Dropout strength, where 0 = No dropout, higher = more dropout.')
-    parser.add_argument('--sample_dropout_rate', type=float, default=0.5,
-                        help='Dropout rate for selecting training samples, where 0 = No dropout, higher = more dropout.')
-    parser.add_argument('-g', '--nr_gpu', type=int, default=1,
-                        help='The number GPUs to distribute the training across')
-
-    # reproducibility:random seed
-    parser.add_argument('-s', '--seed', type=int, default=42,
-                        help='Random seed to use')
 
     args = parser.parse_args()
     print('INFO CHECK!\ninput args:\n', json.dumps(vars(args), indent=4, separators=(',', ':')))
@@ -212,6 +221,10 @@ def sample(args):
 
     print("data set loading okay")
     input_data, target_data = data_loader.next_batch()
+    print(input_data.shape)
+    print(target_data.shape)
+
+    quit()
     draw_sketch_array(input_data, args, svg_only = True)
 
     quit()

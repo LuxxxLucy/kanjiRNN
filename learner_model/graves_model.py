@@ -41,9 +41,7 @@ class LSTM_Model_Session(ModelSession):
         return cls(session, tf.train.Saver(), kwargs['args'])
 
     @staticmethod
-    def create_graph(class_num, item_dim, args, val_portion=0.4, save_path=savePath, n_epoch=5,
-                 batch_size=128, learning_rate=0.00001, print_freq=100, global_step=0,
-                 layer_num=1, top_unit_num=32, dropout=0.0):
+    def create_graph(args, infer=False):
         """
         The fully connected model for predicting next item that would be consumed by the user
 
@@ -62,24 +60,35 @@ class LSTM_Model_Session(ModelSession):
 
         """
 
+        if infer:
+            args.batch_size = 1
+            args.seq_length = 1
+
         iteration = tf.Variable(initial_value=0, trainable=False, name="iteration")
+
         with tf.variable_scope("parameters"):
-            x = tf.placeholder(tf.int32, shape=[None, None, ], name='x')
-            y = tf.placeholder(tf.int64, shape=[None, ], name='y')
-            y_test = tf.placeholder(tf.int64, shape=[None, None,], name='y_test')
+            x = tf.placeholder(tf.float64, shape=[args.batch_size, args.seq_length, 5], name='x')
+            y = tf.placeholder(tf.float64, shape=[args.batch_size, args.seq_length, 5], name='y')
+            X_lengths = tf.placeholder(tf.float64, shape=[args.batch_size, args.seq_length,], name='x')
             drop_rate = tf.placeholder(tf.float32, name="drop_rate")
             learning_rate = tf.placeholder(tf.float32, name="learning_rate")
 
-        x=tf.one_hot(indices=x,depth=class_num)
-        x = Masking(mask_value=0.)(x)
-        network=LSTM(20)(x) # return a single vector of dimension 32
+        cell = tf.nn.rnn_cell.LSTMCell(num_units=64, state_is_tuple=True)
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell=cell, output_keep_prob=1-drop_rate)
+        cell = tf.nn.rnn_cell.MultiRNNCell(cells=[cell] * 4, state_is_tuple=True)
 
         # network = tf.layers.dropout(inputs=network, rate=drop_rate)
-        # network = tf.layers.dense(inputs=network, units=1000)
+        # y_output = tf.layers.dense(inputs=network, units=class_num)
+        # y_ = tf.identity(y_output, name='y_result')
 
-        network = tf.layers.dropout(inputs=network, rate=drop_rate)
-        y_output = tf.layers.dense(inputs=network, units=class_num)
-        y_ = tf.identity(y_output, name='y_result')
+        outputs, last_states = tf.nn.dynamic_rnn(cell=cell, dtype=tf.float64, sequence_length=x_lengths, inputs=x)
+
+
+        # outputs, states  = tf.nn.bidirectional_dynamic_rnn( cell_fw=cell, cell_bw=cell, dtype=tf.float64, sequence_length=X_lengths, inputs=X)
+        #
+        # output_fw, output_bw = outputs
+        # states_fw, states_bw = states
+
 
         with tf.variable_scope("train"):
             cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y_, labels=y))
