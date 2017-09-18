@@ -10,6 +10,8 @@ import tensorflow as tf
 import keras
 from keras.layers import LSTM,Dense,Masking
 
+import random
+
 # print  function for debug
 from pprint import pprint as pr
 
@@ -68,9 +70,9 @@ class LSTM_Model_Session(ModelSession):
         iteration = tf.Variable(initial_value=0, trainable=False, name="iteration")
 
         with tf.variable_scope("parameters"):
-            x = tf.placeholder(tf.float32, shape=[args.batch_size, args.seq_length, 5], name='x')
-            y = tf.placeholder(tf.float32, shape=[args.batch_size, args.seq_length, 5], name='y')
-            x_lengths = tf.placeholder(tf.int32, shape=[args.batch_size], name='x_lengths')
+            x = tf.placeholder(tf.float32, shape=[None, args.seq_length, 5], name='x')
+            y = tf.placeholder(tf.float32, shape=[None, args.seq_length, 5], name='y')
+            x_lengths = tf.placeholder(tf.int32, shape=[None], name='x_lengths')
 
             drop_rate = tf.placeholder(tf.float32, name="drop_rate")
             learning_rate = tf.placeholder(tf.float32, name="learning_rate")
@@ -83,13 +85,21 @@ class LSTM_Model_Session(ModelSession):
         # Linear activation, using outputs computed above
         y_ = Dense(num_classes)(network)
 
+        with tf.variable_scope("result"):
+            [o_pi, o_mu1, o_mu2, o_sigma1, o_sigma2, o_corr, o_pen] = get_mixture_coef(y_)
+
+            o_pi=tf.identity(o_pi,name="o_pi")
+            o_mu1=tf.identity(o_pi,name="o_mu1")
+            o_mu2=tf.identity(o_pi,name="o_mu2")
+            o_sigma1=tf.identity(o_pi,name="o_sigma1")
+            o_sigma2=tf.identity(o_pi,name="o_sigma2")
+            o_corr=tf.identity(o_pi,name="o_corr")
+            o_pen=tf.identity(o_pi,name="o_pen")
 
         with tf.variable_scope("train"):
             flat_target_data = tf.identity(y)
             [x1_data, x2_data, eos_data, eoc_data, cont_data] = tf.split(flat_target_data, 5, 2)
             pen_data = tf.concat([eos_data, eoc_data, cont_data],2)
-
-            [o_pi, o_mu1, o_mu2, o_sigma1, o_sigma2, o_corr, o_pen] = get_mixture_coef(y_)
 
             [lossfunc, loss_shape, loss_pen] = get_lossfunc(o_pi, o_mu1, o_mu2, o_sigma1, o_sigma2, o_corr, o_pen, x1_data, x2_data, pen_data, args.stroke_importance_factor)
             cost = lossfunc
@@ -103,6 +113,92 @@ class LSTM_Model_Session(ModelSession):
 
         with tf.variable_scope("test"):
             predictions=tf.cast(y_,tf.int32)
+
+    def sample(self,args,initial_data):
+        num=args.sample_length
+        temp_mixture=args.temperature
+        temp_pen=args.temperature
+        stop_if_eoc =args.stop_if_eoc
+
+        def get_pi_idx(x, pdf):
+            N = pdf.size
+            accumulate = 0
+            for i in range(0, N):
+                accumulate += pdf[i]
+                if (accumulate >= x):
+                    return i
+            print ('error with sampling ensemble')
+            return -1
+
+        def sample_gaussian_2d(mu1, mu2, s1, s2, rho):
+            mean = [mu1, mu2]
+            cov = [[s1*s1, rho*s1*s2], [rho*s1*s2, s2*s2]]
+            x = np.random.multivariate_normal(mean, cov, 1)
+            return x[0][0], x[0][1]
+
+        prev_x = [it for it in initial_data]
+        #prev_x[0, 0, 2] = 1 # initially, we want to see beginning of new stroke
+        #prev_x[0, 0, 3] = 1 # initially, we want to see beginning of new character/content
+        # prev_state = sess.run(self.cell.zero_state(self.args.batch_size, tf.float32))
+
+        init_len=5
+        strokes = np.zeros((num+init_len, 5), dtype=np.float32)
+        strokes[:init_len,:]=initial_data[0]
+        mixture_params = []
+
+        for i in range(num):
+            prev_x = np.asarray(prev_x,dtype=np.float32)
+            feed = {self.x: prev_x}
+            [o_pi, o_mu1, o_mu2, o_sigma1, o_sigma2, o_corr, o_pen] = self.session.run([self.pi, self.mu1, self.mu2, self.sigma1, self.sigma2, self.corr, self.pen],feed)
+
+            pi_pdf = o_pi[0][-1]
+            if i > 1:
+                pi_pdf = np.log(pi_pdf) / temp_mixture
+                pi_pdf -= pi_pdf.max()
+                pi_pdf = np.exp(pi_pdf)
+            pi_pdf /= pi_pdf.sum()
+
+            idx = get_pi_idx(random.random(), pi_pdf)
+
+            pen_pdf = o_pen[0]
+            if i > 1:
+                pi_pdf /= temp_pen # softmax convert to prob
+            pen_pdf -= pen_pdf.max()
+            pen_pdf = np.exp(pen_pdf)
+            pen_pdf /= pen_pdf.sum()
+
+            pen_idx = get_pi_idx(random.random(), pen_pdf)
+            eos = 0
+            eoc = 0
+            cont_state = 0
+
+            if pen_idx == 0:
+                eos = 1
+            elif pen_idx == 1:
+                eoc = 1
+            else:
+                cont_state = 1
+
+            next_x1, next_x2 = sample_gaussian_2d(o_mu1[0,-1,idx], o_mu2[0, -1, idx], o_sigma1[0, -1 , idx], o_sigma2[0, -1, idx], o_corr[0, -1, idx])
+
+            point = [next_x1, next_x2, eos, eoc, cont_state]
+            strokes[i+init_len,:] = point
+
+            params = [pi_pdf, o_mu1[0], o_mu2[0], o_sigma1[0], o_sigma2[0], o_corr[0], pen_pdf]
+            mixture_params.append(params)
+
+            # early stopping condition
+            if (stop_if_eoc and eoc == 1):
+              strokes = strokes[0:i+1+init_len, :]
+              break
+
+            prev_x = [ [its for its in it] for it in prev_x ]
+            prev_x[0]=prev_x[0][:-1]
+            prev_x[0].append([next_x1, next_x2, eos, eoc, cont_state])
+
+        strokes[:,0:2] *= args.scale_factor
+        return strokes, mixture_params
+
 
     def __str__(self):
         return "LSTM Model (Graves et al.) (iteration %d)" % (
@@ -136,13 +232,19 @@ class LSTM_Model_Session(ModelSession):
 
     def test_batch(self, x, y):
         x, y, seq_len = self.preprocess_for_train(x, y)
-        result= self.session.run(self.loss, feed_dict={self.x: x, self.y: y, self.drop_rate: 0.0, self.learning_rate: learning_rate})
+        result= self.session.run(self.loss, feed_dict={self.x: x, self.y: y, self.drop_rate: 0.0})
         return result
 
     def test(self, x, y):
         x, y = self.preprocess_for_train(x, y)
         result= self.session.run(self.loss, feed_dict={self.x: x, self.y: y, self.drop_rate: 0.0, self.learning_rate: learning_rate})
+
+
         return result
+
+    def sample_test(self):
+        return self.session.run([self.pred, self.iteration])
+
 
 
     @property
@@ -156,7 +258,6 @@ class LSTM_Model_Session(ModelSession):
     @property
     def y_(self):
         return self._tensor("y_result:0")
-
 
     @property
     def iteration(self):
@@ -185,6 +286,35 @@ class LSTM_Model_Session(ModelSession):
     @property
     def learning_rate(self):
         return self._tensor("parameters/learning_rate:0")
+
+    @property
+    def pi(self):
+        return self._tensor("result/o_pi:0")
+
+    @property
+    def mu1(self):
+        return self._tensor("result/o_mu1:0")
+
+    @property
+    def mu2(self):
+        return self._tensor("result/o_mu2:0")
+
+    @property
+    def sigma1(self):
+        return self._tensor("result/o_sigma1:0")
+
+    @property
+    def sigma2(self):
+        return self._tensor("result/o_sigma2:0")
+
+    @property
+    def corr(self):
+        return self._tensor("result/o_corr:0")
+
+    @property
+    def pen(self):
+        return self._tensor("result/o_pen:0")
+
 
     def _tensor(self, name):
         return self.session.graph.get_tensor_by_name(name)

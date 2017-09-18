@@ -54,7 +54,7 @@ def main():
                         help='Every how many epochs to write checkpoint/samples?')
     parser.add_argument('-r','--report_interval', type=int, default=1,
                         help='Every how many epochs to report current situation?')
-    parser.add_argument('-v','--validation_interval', type=int, default=100,
+    parser.add_argument('-v','--validation_interval', type=int, default=10,
                         help='Every how many epochs to do validation current situation?')
     parser.add_argument('--load_params', type=bool, default=False,
                         help='Restore training from previous model checkpoint')
@@ -106,13 +106,13 @@ def main():
     # sample options
     parser.add_argument('--filename', type=str, default='output',
                        help='filename of .svg file to output, without .svg')
-    parser.add_argument('--sample_length', type=int, default=600,
+    parser.add_argument('--sample_length', type=int, default=100,
                        help='number of strokes to sample')
     parser.add_argument('--picture_size', type=float, default=160,
                        help='a centered svg will be generated of this size')
     parser.add_argument('--scale_factor', type=float, default=1,
                        help='factor to scale down by for svg output.  smaller means bigger output')
-    parser.add_argument('--num_picture', type=int, default=1,
+    parser.add_argument('--num_picture', type=int, default=20,
                        help='number of pictures to generate')
     parser.add_argument('--num_col', type=int, default=5,
                        help='if num_picture > 1, how many pictures per row?')
@@ -204,10 +204,9 @@ def train(args):
 
         if (iEpoch+1) % args.report_interval == 0:
             training_batch_loss = model.test_batch(test_input_data, test_target_data)
-            print("%s: training batch loss %0.4f" % (model, training_batch_accuracy))
-        # if (iEpoch+1) % args.validation_interval == 0:
-        #     validation_loss = model.test(dataLoader.X_val, dataLoader.y_val)
-        #     print("%s: validataion acc: %0.4f" % (model, validation_acc))
+            print("%s: training batch loss %0.4f" % (model, training_batch_loss))
+        if (iEpoch+1) % args.validation_interval == 0:
+            sample_sketches(args,model,data_loader,file_index=iEpoch)
         if (iEpoch+1) % args.checkpoint_interval == 0:
             model.save(model_path_name)
 
@@ -229,7 +228,6 @@ def sample(args):
 
     quit()
     draw_sketch_array(input_data, args, svg_only = True)
-
     quit()
 
     # TODO:get data
@@ -237,6 +235,51 @@ def sample(args):
     model = Model_Session.restore(model_path_name)
     print(model)
     accuracy = model.test(test_data.images, test_data.labels)
+
+def sample_sketches(sample_args,model,data_set,file_index=None):
+    min_size_ratio = 0.0
+    max_size_ratio = 0.8
+    min_num_stroke = 4
+    max_num_stroke=22
+    svg_only = True
+    N = sample_args.num_picture
+    frame_size = float(sample_args.picture_size)
+    max_size = frame_size * max_size_ratio
+    min_size = frame_size * min_size_ratio
+    count = 0
+    sketch_list = []
+    param_list = []
+
+    temp_mixture = sample_args.temperature
+    temp_pen = sample_args.temperature
+    sample_args.stop_if_eoc = True
+
+    if file_index != None:
+        sample_args.filename = sample_args.filename+str(file_index)
+
+    while count < N:
+        #print "attempting to generate picture #", count
+        init,target = data_set.next_one()
+        init=init[:,5,:]
+        [strokes, params] = model.sample(sample_args,init)
+        # [strokes, params] = model.sample(sess, sample_args.sample_length, temp_mixture, temp_pen, stop_if_eoc = True)
+        [sx, sy, num_stroke, num_char, _] = strokes.sum(0)
+        if num_stroke < min_num_stroke or num_char == 0 or num_stroke > max_num_stroke:
+            #print "num_stroke ", num_stroke, " num_char ", num_char
+            continue
+        [sx, sy, sizex, sizey] = calculate_start_point(strokes)
+        if sizex > max_size or sizey > max_size:
+            #print "sizex ", sizex, " sizey ", sizey
+            continue
+        if sizex < min_size or sizey < min_size:
+            #print "sizex ", sizex, " sizey ", sizey
+            continue
+        # success
+        count += 1
+        sketch_list.append(strokes)
+        param_list.append(params)
+    # draw the pics
+    draw_sketch_array(sketch_list, sample_args, svg_only = svg_only)
 
 if __name__ == "__main__":
     main()
