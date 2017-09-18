@@ -141,7 +141,7 @@ class LSTM_Model_Session(ModelSession):
         #prev_x[0, 0, 3] = 1 # initially, we want to see beginning of new character/content
         # prev_state = sess.run(self.cell.zero_state(self.args.batch_size, tf.float32))
 
-        init_len=5
+        init_len=30
         strokes = np.zeros((num+init_len, 5), dtype=np.float32)
         strokes[:init_len,:]=initial_data[0]
         mixture_params = []
@@ -151,7 +151,7 @@ class LSTM_Model_Session(ModelSession):
             feed = {self.x: prev_x}
             [o_pi, o_mu1, o_mu2, o_sigma1, o_sigma2, o_corr, o_pen] = self.session.run([self.pi, self.mu1, self.mu2, self.sigma1, self.sigma2, self.corr, self.pen],feed)
 
-            pi_pdf = o_pi[0][-1]
+            pi_pdf = o_pi[0,-1,:]
             if i > 1:
                 pi_pdf = np.log(pi_pdf) / temp_mixture
                 pi_pdf -= pi_pdf.max()
@@ -160,7 +160,7 @@ class LSTM_Model_Session(ModelSession):
 
             idx = get_pi_idx(random.random(), pi_pdf)
 
-            pen_pdf = o_pen[0]
+            pen_pdf = o_pen[0,-1,:]
             if i > 1:
                 pi_pdf /= temp_pen # softmax convert to prob
             pen_pdf -= pen_pdf.max()

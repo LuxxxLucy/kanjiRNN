@@ -106,7 +106,7 @@ def main():
     # sample options
     parser.add_argument('--filename', type=str, default='output',
                        help='filename of .svg file to output, without .svg')
-    parser.add_argument('--sample_length', type=int, default=100,
+    parser.add_argument('--sample_length', type=int, default=50,
                        help='number of strokes to sample')
     parser.add_argument('--picture_size', type=float, default=160,
                        help='a centered svg will be generated of this size')
@@ -205,7 +205,7 @@ def train(args):
         if (iEpoch+1) % args.report_interval == 0:
             training_batch_loss = model.test_batch(test_input_data, test_target_data)
             print("%s: training batch loss %0.4f" % (model, training_batch_loss))
-        if (iEpoch+1) % args.validation_interval == 0:
+        if (iEpoch+1) % args.validation_interval == 0 and iEpoch >= 10:
             print("sampling!")
             sample_sketches(args,model,data_loader,file_index=iEpoch)
         if (iEpoch+1) % args.checkpoint_interval == 0:
@@ -253,16 +253,18 @@ def sample_sketches(sample_args,model,data_set,file_index=None):
 
     temp_mixture = sample_args.temperature
     temp_pen = sample_args.temperature
-    sample_args.stop_if_eoc = True
+
+    args=sample_args
+    args.stop_if_eoc = True
 
     if file_index != None:
-        sample_args.filename = sample_args.filename+str(file_index)
+        args.filename = sample_args.filename+str(file_index)
 
     while count < N:
         #print "attempting to generate picture #", count
         init,target = data_set.next_one()
-        init=init[:,5,:]
-        [strokes, params] = model.sample(sample_args,init)
+        # init[:,5:,:]=0
+        [strokes, params] = model.sample(args,init)
         # [strokes, params] = model.sample(sess, sample_args.sample_length, temp_mixture, temp_pen, stop_if_eoc = True)
         [sx, sy, num_stroke, num_char, _] = strokes.sum(0)
         if num_stroke < min_num_stroke or num_char == 0 or num_stroke > max_num_stroke:
@@ -280,7 +282,7 @@ def sample_sketches(sample_args,model,data_set,file_index=None):
         sketch_list.append(strokes)
         param_list.append(params)
     # draw the pics
-    draw_sketch_array(sketch_list, sample_args, svg_only = svg_only)
+    draw_sketch_array(sketch_list, args, svg_only = svg_only)
 
 if __name__ == "__main__":
     main()
