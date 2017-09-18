@@ -206,6 +206,7 @@ def train(args):
             training_batch_loss = model.test_batch(test_input_data, test_target_data)
             print("%s: training batch loss %0.4f" % (model, training_batch_loss))
         if (iEpoch+1) % args.validation_interval == 0:
+            print("sampling!")
             sample_sketches(args,model,data_loader,file_index=iEpoch)
         if (iEpoch+1) % args.checkpoint_interval == 0:
             model.save(model_path_name)

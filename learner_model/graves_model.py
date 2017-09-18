@@ -89,12 +89,12 @@ class LSTM_Model_Session(ModelSession):
             [o_pi, o_mu1, o_mu2, o_sigma1, o_sigma2, o_corr, o_pen] = get_mixture_coef(y_)
 
             o_pi=tf.identity(o_pi,name="o_pi")
-            o_mu1=tf.identity(o_pi,name="o_mu1")
-            o_mu2=tf.identity(o_pi,name="o_mu2")
-            o_sigma1=tf.identity(o_pi,name="o_sigma1")
-            o_sigma2=tf.identity(o_pi,name="o_sigma2")
-            o_corr=tf.identity(o_pi,name="o_corr")
-            o_pen=tf.identity(o_pi,name="o_pen")
+            o_mu1=tf.identity(o_mu1,name="o_mu1")
+            o_mu2=tf.identity(o_mu2,name="o_mu2")
+            o_sigma1=tf.identity(o_sigma1,name="o_sigma1")
+            o_sigma2=tf.identity(o_sigma2,name="o_sigma2")
+            o_corr=tf.identity(o_corr,name="o_corr")
+            o_pen=tf.identity(o_pen,name="o_pen")
 
         with tf.variable_scope("train"):
             flat_target_data = tf.identity(y)

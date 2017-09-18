@@ -27,7 +27,7 @@ def get_lossfunc(z_pi, z_mu1, z_mu2, z_sigma1, z_sigma2, z_corr, z_pen, x1_data,
     result1 = -tf.log(tf.maximum(result1, 1e-20)) # at the beginning, some errors are exactly zero.
     result_shape = tf.reduce_mean(result1)
 
-    result2 = tf.nn.softmax_cross_entropy_with_logits(labels=z_pen, logits=pen_data)
+    result2 = tf.nn.softmax_cross_entropy_with_logits(logits=z_pen, labels=pen_data)
     pen_data_weighting = pen_data[:,:, 2]+np.sqrt(stroke_importance_factor)*pen_data[:, :,  0]+stroke_importance_factor*pen_data[:, :, 1]
     result2 = tf.multiply(result2, pen_data_weighting)
     result_pen = tf.reduce_mean(result2)
