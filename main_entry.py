@@ -46,15 +46,15 @@ def main():
     # data I/O
     parser.add_argument('--model_directory', type=str, default=settings.MODEL_STORE_PATH,
                         help='Location for parameter checkpoints and samples')
-    parser.add_argument('--model_name', type=str, default='lstm_model',
+    parser.add_argument('--model_name', type=str, default='graves_model',
                         help='gru_model|lstm_model model file name (will create a separated folder)')
     parser.add_argument('-d', '--data_set', type=str, default='kanji',
                         help='Can be kanji')
     parser.add_argument('-c','--checkpoint_interval', type=int, default=1,
                         help='Every how many epochs to write checkpoint/samples?')
-    parser.add_argument('-r','--report_interval', type=int, default=1000,
+    parser.add_argument('-r','--report_interval', type=int, default=1,
                         help='Every how many epochs to report current situation?')
-    parser.add_argument('-v','--validation_interval', type=int, default=10,
+    parser.add_argument('-v','--validation_interval', type=int, default=100,
                         help='Every how many epochs to do validation current situation?')
     parser.add_argument('--load_params', type=bool, default=False,
                         help='Restore training from previous model checkpoint')
@@ -78,12 +78,16 @@ def main():
                         help='number of layers in the RNN')
     parser.add_argument('-q', '--seq_length', type=int, default=30,
                         help='The minimum length of history sequence')
+    parser.add_argument('--num_mixture', type=int, default=1,
+                    help='number of gaussian mixtures')
+    parser.add_argument('--stroke_importance_factor', type=float, default=200.0,
+                    help='relative importance of pen status over mdn coordinate accuracy')
 
     # hyper-parameter for optimization
     parser.add_argument('--grad_clip', type=float, default=5.0,
                         help='clip gradients at this value')
     parser.add_argument('--learning_rate', type=float,
-                        default=0.1, help='Base learning rate')
+                        default=0.01, help='Base learning rate')
     parser.add_argument('--lr_decay', type=float, default=0.999995,
                         help='Learning rate decay, applied every step of the optimization')
     parser.add_argument('--batch_size', type=int, default=128,
@@ -108,7 +112,7 @@ def main():
                        help='a centered svg will be generated of this size')
     parser.add_argument('--scale_factor', type=float, default=1,
                        help='factor to scale down by for svg output.  smaller means bigger output')
-    parser.add_argument('--num_picture', type=int, default=20,
+    parser.add_argument('--num_picture', type=int, default=1,
                        help='number of pictures to generate')
     parser.add_argument('--num_col', type=int, default=5,
                        help='if num_picture > 1, how many pictures per row?')
@@ -148,16 +152,17 @@ def train(args):
     if args.data_set == 'kanji':
         print('start loading dataset', args.data_set)
         # data loader
+        print('loading...')
         import data.kanjivg_data as data
-        dataLoader = data.DataLoader(args)
-        print('dataset', args.data_set, 'loading completed')
+        data_loader = data.SketchLoader(args)
+        print("data set loading okay")
     else:
         print('this dataset is not available , or the dataset name not correct')
         quit()
 
     args.model_file_name=args.model_name+"_file"
     if args.model_name == "graves_model":
-        from leaner_model.graves_model import LSTM_Model_Session as model_session
+        from learner_model.graves_model import LSTM_Model_Session as model_session
         print('import graves model LSTM model okay')
     else:
         print('not valid name for model')
@@ -179,32 +184,30 @@ def train(args):
             os.makedirs(model_path_name)
             print("The folder to store the model has been created")
         print("Not load prestored model, creating a new model ...")
-        model = model_session.create(class_num=class_num, item_dim=ITEM_DIM, args=args)
+        model = model_session.create(args=args,infer=False)
     print(model)
 
 
-    args.max_len=dataLoader.max_len
+    args.max_len=30
     model.args=args
-    model.dataLoader=dataLoader
 
-    if args.training_num is None:
-        args.training_num = len(dataLoader.X_train)
-
-    X = dataLoader.X_train[:args.training_num]
-    Y = dataLoader.y_train[:args.training_num]
+    data_loader.reset_index_pointer()
+    test_input_data, test_target_data = data_loader.next_batch()
 
     for iEpoch in range(args.training_epoch):
         print("epoch num",iEpoch)
-
-        for x, y in tqdm(tl.iterate.minibatches(X, Y, args.batch_size, shuffle=True), disable=args.silent):
+        data_loader.reset_index_pointer()
+        while data_loader.epoch_finished == False:
+            input_data, target_data = data_loader.next_batch()
             # Train the model
-            iteration = model.train(x, y,  args.learning_rate, args.dropout_rate)
+            iteration = model.train(input_data, target_data, args.learning_rate, args.dropout_rate)
+
         if (iEpoch+1) % args.report_interval == 0:
-            training_batch_accuracy = model.test_batch(X[:args.batch_size], Y[:args.batch_size])
-            print("%s: training batch accuracy %0.4f" % (model, training_batch_accuracy))
-        if (iEpoch+1) % args.validation_interval == 0:
-            validation_acc = model.test(dataLoader.X_val, dataLoader.y_val)
-            print("%s: validataion acc: %0.4f" % (model, validation_acc))
+            training_batch_loss = model.test_batch(test_input_data, test_target_data)
+            print("%s: training batch loss %0.4f" % (model, training_batch_accuracy))
+        # if (iEpoch+1) % args.validation_interval == 0:
+        #     validation_loss = model.test(dataLoader.X_val, dataLoader.y_val)
+        #     print("%s: validataion acc: %0.4f" % (model, validation_acc))
         if (iEpoch+1) % args.checkpoint_interval == 0:
             model.save(model_path_name)
 
@@ -234,16 +237,6 @@ def sample(args):
     model = Model_Session.restore(model_path_name)
     print(model)
     accuracy = model.test(test_data.images, test_data.labels)
-    accuracy_top_5 = model.test_top_n(test_data.images, test_data.labels, n=5)
-    accuracy_top_10 = model.test_top_n(test_data.images, test_data.labels, n=10)
-    accuracy_top_15 = model.test_top_n(test_data.images, test_data.labels, n=15)
-    accuracy_top_20 = model.test_top_n(test_data.images, test_data.labels, n=20)
-
-    print("Test accuracy %0.4f" % accuracy)
-    print("top-5 : %f" % accuracy_top_5)
-    print("top-10 : %f" % accuracy_top_10)
-    print("top-15 : %f" % accuracy_top_15)
-    print("top-20 : %f" % accuracy_top_20)
 
 if __name__ == "__main__":
     main()
