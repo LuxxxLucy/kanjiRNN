@@ -1,6 +1,6 @@
 # Kanji RNN
 
-still under development!!!!cannot run without dataset!
+(dataset has been uploaded in the repo)
 
 Using RNN to generate Kanji Characters (vector image).
 
