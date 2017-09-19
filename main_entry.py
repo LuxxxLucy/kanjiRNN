@@ -40,7 +40,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     # meta info
-    parser.add_argument('--mode', type=str, default='sample',
+    parser.add_argument('--mode', type=str, default='train',
                         help='train or sample')
 
     # data I/O
@@ -78,7 +78,7 @@ def main():
                         help='number of layers in the RNN')
     parser.add_argument('-q', '--seq_length', type=int, default=30,
                         help='The minimum length of history sequence')
-    parser.add_argument('--num_mixture', type=int, default=1,
+    parser.add_argument('--num_mixture', type=int, default=24,
                     help='number of gaussian mixtures')
     parser.add_argument('--stroke_importance_factor', type=float, default=200.0,
                     help='relative importance of pen status over mdn coordinate accuracy')

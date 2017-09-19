@@ -78,7 +78,7 @@ class LSTM_Model_Session(ModelSession):
             learning_rate = tf.placeholder(tf.float32, name="learning_rate")
 
         network = LSTM(64, return_sequences=True)(x)
-        network = LSTM(64, return_sequences=True)(network)
+        # network = LSTM(64, return_sequences=True)(network)
         network = LSTM(64, return_sequences=True)(network)
 
         num_classes = args.num_mixture*6 + 3
