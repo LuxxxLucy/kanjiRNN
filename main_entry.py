@@ -50,11 +50,11 @@ def main():
                         help='gru_model|lstm_model model file name (will create a separated folder)')
     parser.add_argument('-d', '--data_set', type=str, default='kanji',
                         help='Can be kanji')
-    parser.add_argument('-c','--checkpoint_interval', type=int, default=1,
+    parser.add_argument('-c','--checkpoint_interval', type=int, default=100,
                         help='Every how many epochs to write checkpoint/samples?')
-    parser.add_argument('-r','--report_interval', type=int, default=1,
+    parser.add_argument('-r','--report_interval', type=int, default=100,
                         help='Every how many epochs to report current situation?')
-    parser.add_argument('-v','--validation_interval', type=int, default=10,
+    parser.add_argument('-v','--validation_interval', type=int, default=100,
                         help='Every how many epochs to do validation current situation?')
     parser.add_argument('--load_params', type=bool, default=False,
                         help='Restore training from previous model checkpoint')
@@ -66,7 +66,7 @@ def main():
     # data set construction
     parser.add_argument('--training_num', type=int, default=None,
                         help='number of training samples')
-    parser.add_argument('--training_epoch', type=int, default=300,
+    parser.add_argument('--training_epoch', type=int, default=500,
                         help='number of training epoch')
     parser.add_argument('--val_portion', type=float, default=0.005,
                         help='The portion of data to be validation data')
@@ -92,7 +92,7 @@ def main():
                         help='Learning rate decay, applied every step of the optimization')
     parser.add_argument('--batch_size', type=int, default=128,
                         help='Batch size during training per GPU')
-    parser.add_argument('--dropout_rate', type=float, default=0.0,
+    parser.add_argument('--dropout_rate', type=float, default=0.2,
                         help='Dropout strength, where 0 = No dropout, higher = more dropout.')
     parser.add_argument('--sample_dropout_rate', type=float, default=0.5,
                         help='Dropout rate for selecting training samples, where 0 = No dropout, higher = more dropout.')
@@ -196,6 +196,7 @@ def train(args):
 
     for iEpoch in range(args.training_epoch):
         print("epoch num",iEpoch)
+        args.learning_rate=args.learning_rate*args.lr_decay
         data_loader.reset_index_pointer()
         while data_loader.epoch_finished == False:
             input_data, target_data = data_loader.next_batch()

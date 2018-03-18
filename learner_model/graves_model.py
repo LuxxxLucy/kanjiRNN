@@ -79,7 +79,9 @@ class LSTM_Model_Session(ModelSession):
 
         network = LSTM(64, return_sequences=True)(x)
         # network = LSTM(64, return_sequences=True)(network)
+        network = tf.layers.dropout(network,rate=drop_rate)
         network = LSTM(64, return_sequences=True)(network)
+        network = tf.layers.dropout(network,rate=drop_rate)
 
         num_classes = args.num_mixture*6 + 3
         # Linear activation, using outputs computed above
@@ -108,7 +110,7 @@ class LSTM_Model_Session(ModelSession):
 
             tvars = tf.trainable_variables()
             grads, _ = tf.clip_by_global_norm(tf.gradients(loss, tvars), args.grad_clip)
-            optimizer = tf.train.AdamOptimizer(learning_rate=args.learning_rate, epsilon=0.001)
+            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=0.001)
             train_op = optimizer.apply_gradients(zip(grads, tvars), name='train_step',global_step=iteration)
 
         with tf.variable_scope("test"):
